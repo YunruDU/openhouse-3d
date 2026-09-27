@@ -1,0 +1,122 @@
+/* ============ 中研院 3D 地圖 — 全息科技風樣式 ============ */
+:root {
+  --bg: #030814;
+  --glass: rgba(10, 24, 52, 0.42);
+  --glass-strong: rgba(8, 20, 44, 0.72);
+  --line: rgba(94, 242, 255, 0.35);
+  --line-strong: rgba(94, 242, 255, 0.8);
+  --cyan: #5ef2ff;
+  --blue: #4c8dff;
+  --gold: #ffd36e;
+  --text: #e6f4ff;
+  --muted: #8fb3d9;
+  --radius: 14px;
+  --gutter: 16px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', 'Noto Sans TC', system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+#scene { position: fixed; inset: 0; }
+#scene canvas { display: block; }
+.label-layer { position: absolute; inset: 0; touch-action: none; overflow: hidden; }
+.label-layer > .ov { position: absolute; left: 0; top: 0; will-change: transform; }
+
+/* ---- 全息標籤（建築頂端）---- */
+.holo-pin { display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: opacity .25s; }
+.holo-pin.hidden { opacity: 0; }
+.holo-pin.hidden .holo-label { pointer-events: none; }
+.hl-stem { width: 1px; height: 14px; background: linear-gradient(var(--cyan), transparent); box-shadow: 0 0 4px var(--cyan); }
+.hl-spacer { height: 38px; }
+.holo-label {
+  display: flex; align-items: center; gap: 6px; height: 24px;
+  padding: 0 9px 0 2px;
+  background: linear-gradient(90deg, rgba(8, 30, 60, 0.88), rgba(8, 30, 60, 0.55));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  color: var(--text);
+  box-shadow: 0 0 10px rgba(76, 201, 255, 0.25);
+  cursor: pointer; pointer-events: auto;
+  transition: box-shadow .2s, border-color .2s;
+}
+.holo-label:hover, .holo-pin.selected .holo-label { border-color: var(--line-strong); box-shadow: 0 0 16px rgba(94, 242, 255, 0.6); }
+.hl-count {
+  min-width: 20px; height: 20px; padding: 0 5px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: rgba(76, 201, 255, 0.2); color: var(--cyan);
+  font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700;
+}
+.holo-pin.hot .holo-label { border-color: rgba(255, 211, 110, 0.55); box-shadow: 0 0 12px rgba(255, 190, 80, 0.3); }
+.holo-pin.hot .hl-count { background: rgba(255, 211, 110, 0.2); color: var(--gold); }
+/* 鏡頭拉遠時標籤縮小（main.js 切換 .label-layer.far） */
+.label-layer.far .holo-label { height: 20px; font-size: 10.5px; gap: 4px; padding: 0 7px 0 2px; }
+.label-layer.far .hl-count { min-width: 16px; height: 16px; font-size: 9px; padding: 0 4px; }
+.holo-label { transition: transform .2s, box-shadow .2s, border-color .2s; }
+/* 避讓後縮成數字圓點；滑過展開名稱 */
+.holo-pin.compact .hl-name { display: none; }
+.holo-pin.compact .holo-label { padding: 0 2px; }
+.holo-pin.compact .hl-stem { height: 10px; opacity: .7; }
+.holo-pin.compact:hover { z-index: 10; }
+.holo-pin.compact .holo-label:hover { padding: 0 9px 0 2px; }
+.holo-pin.compact .holo-label:hover .hl-name { display: inline; }
+.holo-pin.hot .hl-stem { background: linear-gradient(var(--gold), transparent); box-shadow: 0 0 4px var(--gold); }
+
+/* ---- 頂部列 ---- */
+.topbar {
+  position: fixed; top: var(--gutter); left: var(--gutter); right: var(--gutter);
+  display: flex; align-items: center; gap: 12px;
+  pointer-events: none; z-index: 10;
+}
+.topbar > * { pointer-events: auto; }
+.brand { display: flex; flex-direction: column; line-height: 1.1; margin-right: auto; }
+.brand-en { font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 3px; color: var(--cyan); text-shadow: 0 0 8px rgba(94, 242, 255, .6); }
+.brand-zh { font-size: 22px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 14px rgba(76, 141, 255, .7); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px;
+  background: var(--glass); color: var(--text);
+  border: 1px solid var(--line); border-radius: 18px;
+  font: 600 13px 'Noto Sans TC', sans-serif; text-decoration: none; cursor: pointer;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.btn:hover { border-color: var(--line-strong); box-shadow: 0 0 14px rgba(94, 242, 255, .35); background: rgba(20, 50, 100, .5); }
+
+/* ---- 載入畫面 ---- */
+#loading {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center; background: var(--bg);
+  font-family: 'Orbitron', sans-serif; letter-spacing: 4px; color: var(--cyan);
+  transition: opacity .6s;
+}
+#loading.done { opacity: 0; pointer-events: none; }
+#loading .ring {
+  width: 64px; height: 64px; margin: 0 auto 16px;
+  border: 2px solid rgba(94, 242, 255, .2); border-top-color: var(--cyan);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 767px) {
+  .brand-zh { font-size: 17px; }
+  .brand { min-width: 0; }
+  .brand-en { font-size: 8px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btn { height: 34px; padding: 0 11px; font-size: 12px; }
+  .btn .txt { display: none; }
+  .holo-label { font-size: 11px; }
+}
+
+/* 頂部列在較窄的電腦螢幕不換行 */
+.btn { white-space: nowrap; }
+@media (max-width: 1360px) { .brand-en { display: none; } .search { flex-basis: 360px; } }
+@media (max-width: 1180px) { .btn .txt { display: none; } }

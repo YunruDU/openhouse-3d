@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>【非官方】院區開放 3D 地圖・個人實驗作品</title>
+  <meta name="description" content="【非官方】個人製作的實驗性 3D 院區地圖，不是中央研究院官方網站，資訊請以官方網站為準。">
+  <meta name="robots" content="noindex, nofollow">
+  <script>
+    // 3D 版只給電腦使用：手機、平板（窄螢幕或只有觸控）自動改用 2D 地圖；網址加 ?force3d 可強制開啟
+    (function () {
+      var touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
+      if ((window.innerWidth < 900 || touchOnly) && location.search.indexOf('force3d') < 0) location.replace('https://yunrudu.github.io/openhouse-demo/MAP/index.html');
+    })();
+  </script>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-M5TZJJGGCB"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-M5TZJJGGCB');
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <link rel="stylesheet" href="3d/style.css">
+  <link rel="stylesheet" href="3d/hud.css">
+</head>
+<body>
+  <div id="loading"><div><div class="ring"></div>LOADING CAMPUS</div></div>
+  <div id="scene"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-en">UNOFFICIAL EXPERIMENTAL DEMO</span>
+      <span class="brand-zh"><span class="badge-unofficial">非官方</span>院區開放 3D 地圖</span>
+    </div>
+    <a class="btn" id="btn-theme" href="?theme=day" title="切換白天 / 夜景"><i class="fa-solid fa-sun"></i><span class="txt">白天</span></a>
+    <button class="btn" id="btn-home" title="回到全景"><i class="fa-solid fa-house"></i><span class="txt">全景</span></button>
+    <a class="btn" href="https://yunrudu.github.io/openhouse-demo/MAP/index.html" title="切換 2D 地圖"><i class="fa-solid fa-map"></i><span class="txt">2D 地圖</span></a>
+  </header>
+  <div id="hud"></div>
+  <div class="attribution">地圖資料 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · 地形 © <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Mapzen Terrain Tiles</a></div>
+
+  <!-- Three.js r147（最後一版提供 classic 腳本，可直接雙擊以 file:// 開啟）-->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/HorizontalTiltShiftShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/VerticalTiltShiftShader.js"></script>
+
+  <script src="3d/config.js"></script>
+  <script src="3d/theme.js"></script>
+  <script src="3d/building_styles.js"></script>
+  <script src="3d/data/terrain.js"></script>
+  <script src="3d/data/buildings.js"></script>
+  <script src="3d/data/environment.js"></script>
+  <script src="3d/data/south.js"></script>
+  <script src="3d/custom_features.js"></script>
+  <script src="3d/data/events.js"></script>
+  <script src="3d/data/registration.js"></script>
+  <script src="3d/main.js"></script>
+  <script src="3d/environment.js"></script>
+  <script src="3d/facilities.js"></script>
+  <script src="3d/hud.js"></script>
+  <script src="3d/nav.js"></script>
+  <script>
+    document.getElementById('btn-home').onclick = () => MAP3D.home();
+    if (window.MAP3D_THEME === 'day') {
+      const b = document.getElementById('btn-theme');
+      b.href = '?theme=night'; b.innerHTML = '<i class="fa-solid fa-moon"></i><span class="txt">夜景</span>';
+    }
+    requestAnimationFrame(() => document.getElementById('loading').classList.add('done'));
+  </script>
+
+  <button class="about-link" id="about-open">關於本站 · 非官方實驗網站</button>
+  <div class="about" id="about" hidden>
+    <div class="about-card" role="dialog" aria-labelledby="about-title">
+      <button class="about-x" id="about-close" title="關閉"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="about-title">關於這個 3D 地圖</h2>
+      <p class="warn"><i class="fa-solid fa-triangle-exclamation"></i> 這是個人製作的<b>實驗性網站</b>，<b>不是中央研究院官方網站</b>，也未經官方審核。
+        活動、報名與設施資訊可能不是最新，請以 <a href="https://openhouse.sinica.edu.tw/" target="_blank" rel="noopener">中研院院區開放官方網站</a> 為準。</p>
+      <h3>怎麼做的</h3>
+      <p>整個 3D 地圖由 <b>Claude Opus 5.5</b>（Anthropic，透過 Claude Code）協助開發，在一次對話中完成，約 3 小時。</p>
+      <ol>
+        <li>從 OpenStreetMap 取得院區邊界、建築輪廓、樓層、道路與綠地，用真實高程資料做出後山地形。</li>
+        <li>參考公開授權的照片，逐棟調整外牆顏色、窗戶樣式與屋頂，做成微縮模型風格（陰影、景深、夜間燈光）。</li>
+        <li>把 2D 活動地圖的搜尋、篩選、報名狀態與設施圖層移植到 3D，並加上時間軸與導覽搖桿。</li>
+        <li>針對沒有獨立顯示卡的電腦做效能優化。</li>
+      </ol>
+      <h3>請注意</h3>
+      <ul>
+        <li>建築外觀與高度、南部院區館舍位置、生態池形狀等為依公開資料<b>推估</b>，與實際可能不同。</li>
+        <li>本站只適合電腦瀏覽；手機會自動轉到 <a href="https://yunrudu.github.io/openhouse-demo/MAP/index.html">2D 地圖</a>。</li>
+        <li>本站使用 Google Analytics 做匿名的瀏覽與點擊統計。</li>
+      </ul>
+      <h3>資料與工具來源</h3>
+      <p class="src">活動資訊：中研院院區開放網站公開資料 · 地圖：© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors（ODbL）
+        · 地形：<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Mapzen Terrain Tiles</a>
+        · 3D 引擎：Three.js（MIT）· 圖示：Font Awesome · 字型：Google Fonts</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var box = document.getElementById('about');
+      document.getElementById('about-open').onclick = function () { box.hidden = false; };
+      document.getElementById('about-close').onclick = function () { box.hidden = true; };
+      box.onclick = function (e) { if (e.target === box) box.hidden = true; };
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') box.hidden = true; });
+    })();
+  </script>
+</body>
+</html>
