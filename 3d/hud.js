@@ -492,6 +492,14 @@
     track('map3d_select', { location: '南部院區' });
     apply();
   }
+  // 給分享連結（ui_extras.js 讀網址 ?event=）用：選取活動所在地點並捲到該活動
+  M.openEvent = id => {
+    const e = M.events[id]; if (!e) return false;
+    const l = M.locations.find(x => x.name === e.location); if (!l) return false;
+    state.focus = e.event_id;
+    l.remote ? openRemote() : M.select(l);
+    return true;
+  };
   $('#remote-card').onclick = () => {
     state.day = '11/14';
     document.querySelectorAll('#day-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.day === '11/14'));

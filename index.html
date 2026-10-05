@@ -10,7 +10,8 @@
     // 3D 版只給電腦使用：手機、平板（窄螢幕或只有觸控）自動改用 2D 地圖；網址加 ?force3d 可強制開啟
     (function () {
       var touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
-      if ((window.innerWidth < 900 || touchOnly) && location.search.indexOf('force3d') < 0) location.replace('https://yunrudu.github.io/openhouse-demo/MAP/index.html');
+      // 轉到 2D 時保留網址參數（?loc=、?event=、?day=），讓 QR Code／分享連結在手機上也能直接定位
+      if ((window.innerWidth < 900 || touchOnly) && location.search.indexOf('force3d') < 0) location.replace('https://yunrudu.github.io/openhouse-demo/MAP/index.html' + location.search);
     })();
   </script>
 

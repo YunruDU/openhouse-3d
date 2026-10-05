@@ -4,6 +4,8 @@
 //    收合狀態記在 localStorage，收合後重新計算 3D 畫面中心（MAP3D.measurePanels）
 // 2. 接待處帳篷：在「接待與服務」設施中名稱含「接待處」的點，放白色雙尖頂帳篷（灰色側牆、紅色桌裙）
 //    與「A 接待處」字牌；依活動日切換 10/03、10/17 的位置（全部活動日時顯示 10/17 的位置）
+// 3. 分享連結：網址 ?day=10/17、?loc=館舍名稱、?event=活動編號 開啟時直接定位（與 2D 地圖相同參數，
+//    手機被轉到 2D 時參數會保留）；頂部「複製連結」複製目前選取的館舍與活動日
 // 依賴：main.js（MAP3D）、facilities.js（MAP3D.setFacilities）、hud.js（面板 DOM）
 // ============================================================
 (function () {
@@ -192,4 +194,68 @@
   }
   updateTents('all');
   M.receptionTents = tents;
+
+  // ---------------- 3. 分享連結 ----------------
+  let curLoc = null;
+  window.addEventListener('map3d:select', ev => { curLoc = ev.detail || null; });
+  window.addEventListener('map3d:campus', ev => { if (ev.detail === 'south') curLoc = null; });
+  const normDay = d => { const m = String(d || '').match(/^(\d{1,2})\/(\d{1,2})$/); return m ? m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') : ''; };
+  function shareUrl() {
+    const p = [];                                  // 不用 URLSearchParams：保留日期的「/」，網址較短、QR Code 較好掃
+    const chip = document.querySelector('#day-chips .chip.on');
+    const day = chip ? chip.dataset.day : 'all';
+    if (curLoc) p.push('loc=' + encodeURIComponent(curLoc.name));
+    if (day && day !== 'all') p.push('day=' + day);
+    else if (!curLoc && M.getCampus && M.getCampus() === 'south') p.push('day=11/14');
+    const qs = p.join('&');
+    return location.origin + location.pathname + (qs ? '?' + qs : '');
+  }
+  function copyText(text, done) {
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      ok ? done() : window.prompt('請複製以下連結：', text);
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  }
+  const share = document.createElement('button');
+  share.className = 'btn';
+  share.id = 'btn-share';
+  share.type = 'button';
+  share.title = '複製目前館舍與活動日的連結（手機開啟會自動用 2D 地圖）';
+  const SHARE_HTML = '<i class="fa-solid fa-link"></i><span class="txt">複製連結</span>';
+  share.innerHTML = SHARE_HTML;
+  if (home) home.before(share);
+  share.addEventListener('click', () => {
+    const url = shareUrl();
+    copyText(url, () => {
+      share.innerHTML = '<i class="fa-solid fa-check"></i><span class="txt">已複製</span>';
+      share.classList.add('on');
+      setTimeout(() => { share.innerHTML = SHARE_HTML; share.classList.remove('on'); }, 1600);
+    });
+    if (typeof gtag === 'function') gtag('event', 'map3d_share', { location: curLoc ? curLoc.name : '' });
+  });
+
+  // 開啟時依網址參數定位
+  const qp = new URLSearchParams(location.search);
+  const qDay = normDay(qp.get('day')), qLoc = (qp.get('loc') || '').trim(), qEvent = (qp.get('event') || '').trim();
+  if (qDay) {
+    const chip = document.querySelector(`#day-chips .chip[data-day="${qDay}"]`);
+    if (chip) chip.click();
+  }
+  if (qEvent || qLoc) {
+    setTimeout(() => {
+      if (qEvent && M.openEvent && M.openEvent(qEvent)) return;
+      if (!qLoc) return;
+      const all = M.locations || [];
+      const loc = all.find(l => l.name === qLoc) || all.find(l => l.name.includes(qLoc) || qLoc.includes(l.name));
+      if (!loc) return;
+      if (loc.remote) { const rc = document.getElementById('remote-card'); if (rc) rc.click(); }
+      else M.select(loc);
+    }, 400);
+  }
 })();
