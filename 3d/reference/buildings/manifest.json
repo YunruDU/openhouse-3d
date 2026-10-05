@@ -1,0 +1,172 @@
+{
+  "_說明": "3D 建築外觀（building_styles.js）比對用的參考照片。照片只用來判斷外牆顏色、材質、窗型與樓層，沒有貼進網頁；此處只記錄出處與授權，不存放照片檔。2026-10-05 整理。",
+  "buildings": [
+    {
+      "id": 127948734,
+      "name": "傅斯年圖書館",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:中央研究院-傅斯年圖書館.jpg",
+          "license": "CC BY-SA 4.0",
+          "author": "Ahao823"
+        }
+      ]
+    },
+    {
+      "id": 3398848,
+      "name": "歷史語言研究所（歷史文物陳列館大樓）",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:Museum_of_the_Institute_of_History_and_Philology_20240904.jpg",
+          "license": "CC0",
+          "author": "玄史生"
+        },
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:中研院史語所歷史文物陳列館.jpg",
+          "license": "CC BY-SA 4.0",
+          "author": "林高志"
+        },
+        {
+          "url": "https://zh.wikipedia.org/zh-tw/中央研究院歷史語言研究所歷史文物陳列館",
+          "note": "王大閎設計，1986 年落成"
+        }
+      ]
+    },
+    {
+      "id": 127950355,
+      "name": "中國文哲研究所",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:中央研究院0005_(11).jpg",
+          "license": "CC BY-SA 4.0",
+          "author": "林高志",
+          "note": "入口照"
+        }
+      ]
+    },
+    {
+      "id": 156281380,
+      "name": "中央研究院溫室（新溫室大樓／實驗植物核心溫室）",
+      "sources": [
+        {
+          "url": "https://newsletter.sinica.edu.tw/27446/",
+          "license": "中研院院訊，僅供參考",
+          "note": "文中外觀照"
+        }
+      ]
+    },
+    {
+      "id": 3404922,
+      "name": "臺灣考古館",
+      "sources": [
+        {
+          "url": "https://www1.ihp.sinica.edu.tw/Resource/CTA",
+          "license": "史語所網站，僅供參考"
+        },
+        {
+          "url": "https://www.sinica.edu.tw/news_content/55/3365",
+          "note": "前棟 1958 年 2 層、後棟地上 3 層"
+        }
+      ]
+    },
+    {
+      "id": 127948742,
+      "name": "資訊科技創新研究中心",
+      "sources": [
+        {
+          "url": "https://www.citi.sinica.edu.tw/",
+          "license": "資創中心網站，僅供參考",
+          "note": "首頁輪播外觀照"
+        }
+      ]
+    },
+    {
+      "id": 244256892,
+      "name": "跨領域科技研究大樓",
+      "sources": [
+        {
+          "url": "https://www.kedge.com.tw/works/中央研究院跨領域科技研究大樓新建工程/",
+          "license": "營造廠作品頁，僅供參考"
+        }
+      ]
+    },
+    {
+      "id": 155114992,
+      "name": "環境變遷研究中心（舊館，原地球所二館）",
+      "sources": [
+        {
+          "url": "https://rcec.sinica.edu.tw/?action=about&ntype=1&id=3",
+          "license": "環變中心網站，僅供參考",
+          "note": "2004 年團體照背景"
+        }
+      ]
+    },
+    {
+      "id": 244256891,
+      "name": "動物房",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:基因體中心動物房_-_panoramio.jpg",
+          "license": "CC BY-SA 3.0",
+          "author": "Panoramio 使用者"
+        }
+      ]
+    },
+    {
+      "ids": [
+        127949216,
+        198260128,
+        127949220,
+        253582198
+      ],
+      "name": "近史所周邊（檔案館、近史所、郭廷以圖書館等）",
+      "status": "同區照片推定，逐棟待確認",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:近史所_-_panoramio.jpg",
+          "license": "CC BY-SA 3.0",
+          "author": "Panoramio 使用者"
+        }
+      ]
+    },
+    {
+      "group": "國家生技研究園區",
+      "status": "遠景照確認色調，逐棟待確認",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:National_Biotechnology_Research_Park_wetland.jpg",
+          "license": "Attribution",
+          "author": "環境部國家環境研究院"
+        }
+      ]
+    },
+    {
+      "ids": [
+        967436875,
+        1124332422,
+        967436876,
+        1124332423,
+        1124332424,
+        1124332425
+      ],
+      "name": "南部院區",
+      "sources": [
+        {
+          "url": "https://commons.wikimedia.org/wiki/File:Academia_Sinica_South_campus_aerialphoto.jpg",
+          "license": "Attribution",
+          "author": "臺南市政府經濟發展局",
+          "note": "2024 空拍"
+        },
+        {
+          "url": "https://www.twarchitect.org.tw/works/中央研究院南部院區規劃與一期研究大樓/",
+          "license": "台灣建築雜誌作品頁，僅供參考"
+        }
+      ]
+    }
+  ],
+  "not_found": [
+    "生物化學研究所 127948740",
+    "環境變遷研究大樓 754128631",
+    "其餘無活動或未命名建築"
+  ]
+}

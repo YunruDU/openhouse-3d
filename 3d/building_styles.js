@@ -11,7 +11,7 @@
 //     floors    樓層數（只在照片明確與 OSM 不符時設定；否則自動用 OSM building:levels）
 //     rooftop   true = 頂樓機房
 //     lit       窗戶亮燈比例 0~1
-// - ✔ = 已依照片確認（照片在 3d/reference/buildings/，來源與授權見 manifest.json）；？= 推測，待照片確認
+// - ✔ = 已依照片確認（照片在 3d/reference/buildings/，來源與授權見 manifest.json；2026-10 新增的項目只記錄照片網址，未存放照片檔）；？= 推測，待照片確認
 // ============================================================
 window.BUILDING_STYLES = {
   floorHeight: 3.8,   // 每層樓高（m）
@@ -34,7 +34,7 @@ window.BUILDING_STYLES = {
   defaultPreset: 'beige',
 
   overrides: {
-    // ---- 國家生技研究園區 ----
+    // ---- 國家生技研究園區（遠景照確認整區為灰白牆＋水平玻璃帶，與 parkModern／glass 樣板一致；逐棟細節待確認）----
     556511681: { preset: 'parkModern', rooftop: true },            // 生醫轉譯中心 ？
     556511678: { preset: 'parkModern' },                           // 核心主題中心 ？
     556511679: { preset: 'glass' },                                // 生物技術開發中心 ？
@@ -45,7 +45,7 @@ window.BUILDING_STYLES = {
     1117935564: { preset: 'glass', floors: 2 },                    // 曉風生態展示館 ？
 
     // ---- 生命科學區 ----
-    244256892: { preset: 'glass', rooftop: true },                 // 跨領域科技研究大樓 ？
+    244256892: { wall: '#ebeae5', roof: '#8d9499', trim: '#86a9b9', win: 'slit', rooftop: true },           // 跨領域科技研究大樓（白色牆板＋錯落直條窗的 DNA 意象、頂層藍綠玻璃帷幕、側翼木紋格柵）✔
     198256221: { wall: '#c7713f', roof: '#6f8a5a', trim: '#dcd6cc', win: 'grid', rooftop: true },  // 生物醫學科學研究所（陶土橘、退台綠屋頂）✔
     127948727: { preset: 'whiteTile' },                            // 檢驗及疫苗研製中心 ？
     127948720: { wall: '#eeeeea', roof: '#8f9398', trim: '#d9d9d4', win: 'grid', rooftop: true },   // 分子生物研究所（白色長條樓）✔
@@ -55,7 +55,7 @@ window.BUILDING_STYLES = {
     127949221: { wall: '#c0643f', roof: '#7d7a74', trim: '#9aa0a6', win: 'slit', floors: 7, rooftop: true },  // 農業生物科技研究中心（磚牆＋金屬格柵）✔（樓層以照片為準：照片約 7 層，OSM 寫 5 層）
     127949214: { wall: '#8fa0ad', roof: '#7d8a94', trim: '#c8d0d6', win: 'glass', rooftop: true }, // 基因體研究中心（灰色玻璃高樓）✔
     1393171243: { wall: '#d0d1cd', roof: '#9a9c9a', trim: '#e8e8e4', win: 'band', floors: 2 },               // 生態時代館（灰白清水模、弧形）✔
-    156281380: { preset: 'greenhouse' },                // 中央研究院溫室（新溫室大樓）？
+    156281380: { wall: '#bcaaa6', roof: '#cfeee6', trim: '#e6dfdb', win: 'slit', floors: 3 },                // 中央研究院溫室（新溫室大樓／實驗植物核心溫室：粉灰磁磚、成組直條窗、玻璃樓梯間、頂樓玻璃溫室）✔
     199925649: { wall: '#9d9d98', roof: '#cfeee6', trim: '#c9c9c4', win: 'glass' },               // 植物分子育種溫室（清水模＋玻璃溫室頂）✔
     127948723: { preset: 'yellow' },                               // 黃樓（依名稱）
     127948729: { preset: 'white' },                                // 白樓（依名稱）
@@ -66,9 +66,9 @@ window.BUILDING_STYLES = {
     3409274: { wall: '#c2735a', roof: '#8a8a86', trim: '#aaa9a3', win: 'grid' },                 // 統計科學研究所（鮭紅磚＋灰色混凝土框、頂部格架）✔
     127949212: { wall: '#c9542f', roof: '#7d7a74', trim: '#dcdcd6', win: 'grid', floors: 7, rooftop: true },  // 化學研究所（橘紅牆＋白色直向柱列）✔（樓層以照片為準：照片約 7 層，OSM 寫 4 層）
     127949217: { wall: '#a8483a', roof: '#7d7a74', trim: '#eeece6', win: 'grid', rooftop: true, brick: 1 }, // 資訊科學研究所（紅磚、白窗框）✔
-    127948742: { preset: 'glass' },                                // 資訊科技創新研究中心 ？
+    127948742: { wall: '#8e4a44', roof: '#7d7a74', trim: '#7fcfb6', win: 'slit', brick: 1, rooftop: true },  // 資訊科技創新研究中心（深紅褐磚牆＋細長綠色玻璃直窗）✔
     754128631: { preset: 'glass', rooftop: true },                 // 環境變遷研究大樓 ？
-    155114992: { preset: 'grey' },                                 // 環境變遷研究中心 ？
+    155114992: { wall: '#c97a55', roof: '#7d7a74', trim: '#b8433a', win: 'grid', brick: 1 },               // 環境變遷研究中心（舊館，原地球所二館：橘色面磚＋紅色飾帶）✔
     344664763: { preset: 'grey' },                                 // 高能物理與科學計算中心 ？
 
     // ---- 人文社會科學區 ----
@@ -78,18 +78,18 @@ window.BUILDING_STYLES = {
     127949211: { wall: '#a9473a', roof: '#7d7a74', trim: '#ecebe6', win: 'band' },                 // 人文社會科學研究中心（紅磚＋白色水平陽台帶）✔
     127950357: { wall: '#e7e4dc', roof: '#6d7075', trim: '#b8473a', win: 'grid' },                  // 民族學研究所（白牆、鋸齒山牆、紅白條紋塔；平面不規則→平頂）✔
     127948721: { wall: '#dcdcd3', roof: '#8f9398', trim: '#f2f2ee', win: 'grid', floors: 3 },                 // 經濟研究所（淺灰白、直向鰭板）✔（樓層以照片為準：2024 照片為 3 層，OSM 寫 6 層）
-    3398848:   { preset: 'traditional' },                          // 歷史語言研究所（歷史文物陳列館）？
+    3398848: { wall: '#b65c47', roof: '#7d7a74', trim: '#a9a8a2', win: 'grid', floors: 7, rooftop: true },  // 歷史語言研究所（歷史文物陳列館大樓，王大閎設計：橘紅磚＋灰色石框、入口高柱廊）✔（樓層以照片為準：照片約 7 層，OSM 寫 4 層）
     127950359: { wall: '#c7704a', roof: '#8a8a86', trim: '#aaa9a3', win: 'grid' },                 // 歷史語言研究所研究大樓（灰色石框＋橘磚）✔
-    127948734: { wall: '#f0efea', roof: '#6f6a64', trim: '#b8322a', win: 'grid', floors: 4 },                 // 傅斯年圖書館（白色、紅色門框；僅有入口照）？
-    127950355: { preset: 'beige' },                                // 中國文哲研究所 ？
-    127949216: { preset: 'brick' },                                // 近史所檔案館 ？
+    127948734: { wall: '#c9c6bc', roof: '#6f6c66', trim: '#e3e0d6', win: 'grid', floors: 3 },                 // 傅斯年圖書館（灰米色混凝土牆板、白框格子窗、出簷平屋頂、紅色門框）✔（樓層以照片為準：地上 3 層＋半地下基座）
+    127950355: { wall: '#a8473a', roof: '#7d7a74', trim: '#9e9c96', win: 'grid', brick: 1 },                 // 中國文哲研究所（紅磚牆＋灰色花崗岩基座與門楣；僅有入口照）✔
+    127949216: { wall: '#b4553e', roof: '#7d7a74', trim: '#a8a7a1', win: 'grid', brick: 1 },              // 近史所檔案館（同區照片：紅磚＋清水混凝土框、磚砌凸窗）？逐棟待確認
     127949218: { wall: '#e3dcc6', roof: '#7d8a80', trim: '#f2eee2', win: 'grid' },                 // 近代史研究所（米白、綠色玻璃）✔
-    198260128: { preset: 'brick' },                                // 近史所 ？
-    127949220: { preset: 'brick' },                                // 近代史研究所 ？
-    253582198: { preset: 'brick' },                                // 郭廷以圖書館 ？
+    198260128: { wall: '#b4553e', roof: '#7d7a74', trim: '#a8a7a1', win: 'grid', brick: 1 },              // 近史所（同區照片：紅磚＋清水混凝土框）？逐棟待確認
+    127949220: { wall: '#b4553e', roof: '#7d7a74', trim: '#a8a7a1', win: 'grid', brick: 1 },              // 近代史研究所（同區照片：紅磚＋清水混凝土框）？逐棟待確認
+    253582198: { wall: '#b4553e', roof: '#7d7a74', trim: '#a8a7a1', win: 'grid', brick: 1 },              // 郭廷以圖書館（同區照片：紅磚＋清水混凝土框）？逐棟待確認
     127950352: { wall: '#c9a58a', roof: '#8b8f93', trim: '#eee8e0', win: 'grid', floors: 3 },                 // 歐美所圖書館（同歐美所）？
     127950356: { wall: '#c9a58a', roof: '#8b8f93', trim: '#a4473a', win: 'grid', floors: 5 },                 // 歐美研究所（磚紅底層＋米粉色上層）✔
-    3404922:   { preset: 'beige' },                                // 臺灣考古館 ？
+    3404922: { wall: '#e6e5df', roof: '#8a8e92', trim: '#c9c9c2', win: 'band', floors: 3 },                // 臺灣考古館（白灰色現代主義、入口出簷雨庇、橫向窗帶；前棟 2 層、後棟地上 3 層）✔
     155778597: { wall: '#b0503d', roof: '#7d7a74', trim: '#e6e0d6', win: 'grid', brick: 1 },      // 嶺南美術館（紅磚）✔
     127948725: { wall: '#ece8de', roof: '#4f5f6e', trim: '#a4473a', win: 'grid', floors: 1, roofType: 'hip' }, // 胡適紀念館（白牆紅磚腳、藍灰瓦）✔（樓層以照片為準：照片為平房，OSM 寫 4 層）
     127949215: { wall: '#6f8fa3', roof: '#8d8f92', trim: '#b0a08a', win: 'glass' },                // 蔡元培紀念館（玻璃牆＋木平台）✔
@@ -101,8 +101,16 @@ window.BUILDING_STYLES = {
     127950347: { preset: 'beige', floors: 2 },                     // 北雲餐廳 ？
     127950354: { preset: 'beige' },                     // 歸國學人宿舍 ？
     254447006: { preset: 'temple', floors: 1 },                                                               // 中研福德宮（紅柱、廟）✔
-    244256891: { preset: 'grey' },                      // 動物房 ？
+    244256891: { wall: '#a59f94', roof: '#8a8d8f', trim: '#5f5e5a', win: 'none', floors: 1 },              // 動物房（單層、灰米色橫紋牆、低斜金屬屋頂、外露空調設備）✔
     298331464: { preset: 'grey', floors: 1 },                      // 警衛室
     156432989: { preset: 'grey', floors: 2 },                       // 環安衛小組 ？
+
+    // ---- 南部院區（台南歸仁沙崙）：依 2024 空拍與建築師作品照 ----
+    967436875: { wall: '#b9bcbb', roof: '#6e7378', trim: '#8a4a35', win: 'slit', floors: 4, rooftop: true },  // 第一期研究大樓＝研究大樓（農生中心）（灰色石材＋鐵鏽紅金屬格柵包覆玻璃立面）✔
+    1124332422: { wall: '#b9d6d2', roof: '#2a323d', trim: '#e4ecec', win: 'glass', floors: 2, lit: 0.2 },    // 第一期溫室＝核心溫室（玻璃溫室、屋頂鋪黑色太陽能板）✔
+    967436876: { wall: '#a59d92', roof: '#6e7378', trim: '#d8c6a0', win: 'grid', floors: 6, rooftop: true },  // 研究大樓＝關鍵中心大樓？（二期：灰褐＋砂岩米色雙色立面，約 6–7 層）？OSM 對應待確認
+    1124332423: { wall: '#a59d92', roof: '#6e7378', trim: '#d8c6a0', win: 'grid', floors: 6, rooftop: true }, // 研究大樓 A棟（同二期）？OSM 對應待確認
+    1124332424: { wall: '#a59d92', roof: '#6e7378', trim: '#d8c6a0', win: 'grid', floors: 6, rooftop: true }, // 研究大樓 B棟＝學人會館？（同二期配色）？OSM 對應待確認
+    1124332425: { wall: '#a59d92', roof: '#6e7378', trim: '#d8c6a0', win: 'grid', floors: 4 },               // 會議室＝綜合大樓？（同二期配色，樓層未知維持 4 層）？OSM 對應待確認
   }
 };

@@ -81,10 +81,18 @@
     const r = regInfo(e);
     if (!r.hasStats || !r.sessions.length) return null;
     const items = r.sessions, k = timeKeys(s.time);
-    return (k.date && k.start && items.find(x => { const t = timeKeys(x.raw_time); return t.date === k.date && t.start === k.start; }))
-      || (k.start && items.find(x => timeKeys(x.raw_time).start === k.start))
+    // 同一活動中同日期、同開始時間的場次（A/B 場同時段）依出現順序對應第 1、第 2 筆報名資料，避免都顯示第一筆
+    const idx = e.sessions.indexOf(s) >= 0 ? e.sessions.indexOf(s) : i;
+    const pick = same => {
+      const cands = items.filter(x => same(timeKeys(x.raw_time)));
+      if (!cands.length) return null;
+      const rank = e.sessions.slice(0, idx).filter(o => same(timeKeys(o.time))).length;
+      return cands[Math.min(rank, cands.length - 1)];
+    };
+    return (k.date && k.start && pick(t => t.date === k.date && t.start === k.start))
+      || (k.start && pick(t => t.start === k.start))
       || (norm(s.name) && items.find(x => { const n = norm(x.session); return n === norm(s.name) || n.includes(norm(s.name)) || norm(s.name).includes(n); }))
-      || (items.length === e.sessions.length && items[i]) || (items.length === 1 && items[0]) || null;
+      || (items.length === e.sessions.length && items[idx]) || (items.length === 1 && items[0]) || null;
   }
   function sessionChip(st) {
     if (!st) return '';
@@ -109,7 +117,8 @@
       const d = clockDay();
       if (!e._s.some(s => s && (!s.day || s.day === d) && s.start <= state.clock && state.clock < s.end)) return false;
     } else if (state.t0 > T_MIN || state.t1 < T_MAX) {
-      if (!e._s.some(s => s && s.start >= state.t0 && s.end <= state.t1)) return false;
+      // 與 2D 地圖相同：場次與所選時段有重疊就顯示（例如 09:00–16:00 的全天展示在 10:00–18:00 內也算；09:00–10:00 剛好結束則不算）
+      if (!e._s.some(s => s && s.start < state.t1 && s.end > state.t0)) return false;
     }
     const q = state.q.toLowerCase();
     if (q) {
