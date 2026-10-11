@@ -157,7 +157,7 @@
   // ---------- 介面 ----------
   const css = document.createElement('style');
   css.textContent = `
-  .sr-panel { position: absolute; z-index: 30; top: 72px; right: 16px; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - 170px); overflow-y: auto;
+  .sr-panel { position: absolute; z-index: 30; top: 72px; right: var(--gutter, 16px); bottom: var(--gutter, 16px); width: min(390px, calc(100vw - 32px)); overflow-y: auto;
     background: linear-gradient(160deg, rgba(14, 34, 72, 0.86), rgba(6, 16, 36, 0.8)); border: 1px solid rgba(94, 242, 255, 0.3); border-radius: 14px;
     backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 12px 40px rgba(0,0,0,.5); color: var(--text, #e6f4ff); padding: 12px 14px; display: none; font-size: 13px; }
   .sr-panel.open { display: block; }
@@ -169,7 +169,9 @@
   .sr-head .hb.min { margin-left: auto; }
   .sr-mini { display: none; font-size: 12.5px; color: var(--muted, #8fb3d9); }
   .sr-mini b { color: var(--gold, #ffd36e); }
-  .sr-panel.min { overflow: hidden; }
+  .sr-panel.min { overflow: hidden; bottom: auto; }
+  .sr-panel.moved { bottom: auto; max-height: calc(100vh - 90px); }
+  @media (max-width: 1280px) { .sr-panel { width: min(340px, calc(100vw - 32px)); } }
   .sr-panel.min > :not(.sr-head):not(.sr-mini) { display: none; }
   .sr-panel.min .sr-mini { display: block; }
   .sr-panel.min .sr-head { margin-bottom: 2px; }
@@ -199,7 +201,7 @@
   .sr-legend i { display: inline-block; width: 18px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
   .sr-pin { font: 800 12px/1 sans-serif; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,.6); pointer-events: none; }
   #btn-shade.on { border-color: #3ddc84; color: #3ddc84; box-shadow: 0 0 12px rgba(61,220,132,.45); }
-  @media (max-width: 700px) { .sr-panel { top: auto; bottom: 8px; max-height: 60vh; } }`;
+  @media (max-width: 700px) { .sr-panel { top: auto !important; bottom: 8px; max-height: 60vh; } }`;
   document.head.appendChild(css);
 
   const panel = document.createElement('div');
@@ -414,7 +416,7 @@
     st.to = 'loc:' + loc.name; $('#srTo').value = st.to; schedule(true);
   });
   // ---------- 拖曳移動、縮小（位置記在這台電腦）----------
-  const POS_KEY = 'map3d-shade-panel';
+  const POS_KEY = 'map3d-shade-panel-v2';
   const saveUi = () => { try { localStorage.setItem(POS_KEY, JSON.stringify({ left: panel.style.left, top: panel.style.top, min: panel.classList.contains('min') })); } catch (e) { /* 無 */ } };
   function clampPos() {
     if (!panel.style.left) return;
@@ -424,7 +426,7 @@
   }
   try {
     const u = JSON.parse(localStorage.getItem(POS_KEY) || '{}');
-    if (u.left && u.top) { panel.style.left = u.left; panel.style.top = u.top; panel.style.right = 'auto'; }
+    if (u.left && u.top) { panel.style.left = u.left; panel.style.top = u.top; panel.style.right = 'auto'; panel.classList.add('moved'); }
     if (u.min) panel.classList.add('min');
   } catch (e) { /* 無 */ }
   const head = panel.querySelector('.sr-head');
@@ -437,29 +439,44 @@
   });
   head.addEventListener('pointermove', e => {
     if (!drag) return;
-    panel.style.right = 'auto';
+    panel.style.right = 'auto'; panel.classList.add('moved');
     panel.style.left = (e.clientX - drag.dx) + 'px';
     panel.style.top = (e.clientY - drag.dy) + 'px';
     clampPos();
   });
   head.addEventListener('pointerup', () => { if (drag) { drag = null; saveUi(); } });
-  head.addEventListener('dblclick', e => { if (!e.target.closest('button')) { panel.style.left = panel.style.top = ''; panel.style.right = ''; saveUi(); } });   // 雙擊標題回到預設位置
+  head.addEventListener('dblclick', e => { if (!e.target.closest('button')) { panel.style.left = ''; panel.style.right = ''; panel.classList.remove('moved'); dock(); saveUi(); } });   // 雙擊標題回到活動清單的位置
   window.addEventListener('resize', clampPos);
   $('.min').onclick = () => { panel.classList.toggle('min'); $('.min').textContent = panel.classList.contains('min') ? '▢' : '—'; saveUi(); };
   if (panel.classList.contains('min')) $('.min').textContent = '▢';
 
-  // 開啟時，如果右側「活動清單」面板開著而且會被擋住，就先收起來，關閉時再展開
-  let foldedRight = false;
+  // 開啟時把「活動總覽」（左）和「活動清單」（右）都收起來，關閉時恢復成原本的樣子
+  const folded = [];
   function makeRoom(on) {
-    const right = document.querySelector('.panel-right'), b = right && right.querySelector('.collapse-btn');
-    if (!b) return;
-    if (on && !panel.style.left && !right.classList.contains('collapsed')) { b.click(); foldedRight = true; }
-    else if (!on && foldedRight) { if (right.classList.contains('collapsed')) b.click(); foldedRight = false; }
+    if (on) {
+      ['.panel-left', '.panel-right'].forEach(sel => {
+        const el = document.querySelector(sel), b = el && el.querySelector('.collapse-btn');
+        if (b && !el.classList.contains('collapsed')) { b.click(); folded.push(sel); }
+      });
+    } else {
+      while (folded.length) {
+        const el = document.querySelector(folded.pop()), b = el && el.querySelector('.collapse-btn');
+        if (b && el.classList.contains('collapsed')) b.click();
+      }
+    }
   }
+  // 停靠在活動清單的位置：上緣接在收合後的清單標籤下方
+  function dock() {
+    if (panel.classList.contains('moved')) return;
+    const right = document.querySelector('.panel-right');
+    const top = right ? right.getBoundingClientRect().bottom + 8 : 72;
+    panel.style.top = Math.max(72, Math.round(top)) + 'px';
+  }
+  window.addEventListener('resize', () => { if (panel.classList.contains('open')) dock(); });
 
   function open() {
-    fillSelects(); panel.classList.add('open'); btn.classList.add('on');
-    makeRoom(true);
+    fillSelects(); makeRoom(true); panel.classList.add('open'); btn.classList.add('on');
+    dock(); requestAnimationFrame(dock); setTimeout(dock, 350);      // 等兩側面板收合的動畫結束再對齊一次
     if (window.MAP3D_THEME !== 'day' && !$('#srNight')) {
       $('#srRes').insertAdjacentHTML('beforebegin', '<div class="sr-note" id="srNight" style="color:var(--gold,#ffd36e)">🌙 目前是夜景模式，看不到陽光照出的影子；<a href="?theme=day" style="color:inherit">切換到白天</a>可以看到建築影子隨時間移動（路線計算不受影響）。</div>');
     }
