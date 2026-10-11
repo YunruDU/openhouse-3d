@@ -11,15 +11,16 @@
   if (!M || !G || !M.sun) return;
 
   const LAT0 = G.o[0], LNG0 = G.o[1];
-  const WALK_M_PER_MIN = 67;
+  const WALK_M_PER_MIN = 67;       // 院區人多、邊走邊看，約時速 4 公里（與 2D 步行路線相同）
+  const CLIMB_FACTOR = 10;          // 每爬升 1 公尺約等於多走 10 公尺
   const SHADE_WEIGHT = 2.0;         // 陰涼路線：曬太陽的路段算成多遠（1 公尺曬太陽 ≈ 1 + 2 = 3 公尺有遮蔭）
   const CELL = 2;                   // 建築影子網格（公尺）
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   // ---------- 路網 ----------
   const NN = G.n.length / 3;
-  const NX = new Float64Array(NN), NZ = new Float64Array(NN);
-  for (let i = 0; i < NN; i++) { NX[i] = G.n[i * 3]; NZ[i] = G.n[i * 3 + 1]; }
+  const NX = new Float64Array(NN), NZ = new Float64Array(NN), NH = new Float64Array(NN);
+  for (let i = 0; i < NN; i++) { NX[i] = G.n[i * 3]; NZ[i] = G.n[i * 3 + 1]; NH[i] = G.n[i * 3 + 2]; }
   const NE = G.e.length / 2;
   const EU = new Int32Array(NE), EV = new Int32Array(NE), EL = new Float64Array(NE), TREE = new Float64Array(NE);
   const ADJ = Array.from({ length: NN }, () => []);
@@ -135,7 +136,127 @@
     let len = Math.hypot(NX[nodes[0]] - from.x, NZ[nodes[0]] - from.z) + Math.hypot(NX[end] - to.x, NZ[end] - to.z), shadeLen = 0;
     edges.forEach(k => { len += EL[k]; shadeLen += EL[k] * SHADE[k]; });
     const roadLen = edges.reduce((a, k) => a + EL[k], 0) || 1;
-    return { nodes, edges, len, shade: shadeLen / roadLen, min: Math.max(1, Math.round(len / WALK_M_PER_MIN)) };
+    let climb = 0;
+    for (let i = 1; i < nodes.length; i++) { const dh = NH[nodes[i]] - NH[nodes[i - 1]]; if (dh > 0) climb += dh; }
+    return { nodes, edges, len, climb, shade: shadeLen / roadLen, min: Math.max(1, Math.ceil((len + climb * CLIMB_FACTOR) / WALK_M_PER_MIN)) };
+  }
+
+  // ---------- 路線說明（與 2D 步行路線相同的做法）：路口轉彎＋沿路建築當地標，每段標出遮蔭 ----------
+  const NAME_ALIAS = { '近史所': '近代史研究所', '統計所': '統計科學研究所', '跨領域大樓': '跨領域科技研究大樓' };
+  const SKIP_MARK = new Set(['警衛室', '動物房', '環安衛小組', '歸國學人宿舍', '國家實驗動物中心']);
+  const norm = n => String(n || '').replace(/台/g, '臺').replace(/[（(][^）)]*[）)]/g, '').replace(/[\s　]+/g, '');
+  const disp = n => String(n || '').replace(/[（(][^）)]*[）)]/g, '').replace(/[\s　]+/g, ' ').trim();
+  const sameName = (a, b) => { a = norm(a); b = norm(b); return !!(a && b && (a === b || a.includes(b) || b.includes(a))); };
+  const LANDMARKS = [];
+  ((window.CAMPUS_BUILDINGS || {}).buildings || []).forEach(b => {
+    let name = (b.n || '').trim(); name = NAME_ALIAS[name] || name;
+    if (!name || SKIP_MARK.has(name)) return;
+    let lm = LANDMARKS.find(l => l.name === name);
+    if (!lm) { lm = { name, rings: [], cx: 0, cz: 0, c: 0 }; LANDMARKS.push(lm); }
+    lm.rings.push(b.p); b.p.forEach(([x, z]) => { lm.cx += x; lm.cz += z; lm.c++; });
+  });
+  LANDMARKS.forEach(l => { l.cx /= l.c; l.cz /= l.c; });
+  function segDist(px, pz, ax, az, bx, bz) {
+    const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz;
+    const t = L ? Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / L)) : 0;
+    return Math.hypot(px - ax - t * dx, pz - az - t * dz);
+  }
+  function distToLandmark(px, pz, lm) {
+    let best = Infinity;
+    lm.rings.forEach(r => {
+      let inside = false;
+      for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+        if ((r[i][1] > pz) !== (r[j][1] > pz) && px < (r[j][0] - r[i][0]) * (pz - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) inside = !inside;
+        best = Math.min(best, segDist(px, pz, r[j][0], r[j][1], r[i][0], r[i][1]));
+      }
+      if (inside) best = 0;
+    });
+    return best;
+  }
+  const heading = (ax, az, bx, bz) => Math.atan2(-(bz - az), bx - ax);
+  const angleDiff = (a, b) => { let d = (b - a) / RAD; while (d > 180) d -= 360; while (d < -180) d += 360; return d; };   // 正＝左轉
+  const sideOf = (ax, az, bx, bz, px, pz) => ((bx - ax) * -(pz - az) - -(bz - az) * (px - ax)) > 0 ? '左' : '右';
+  const fmtM = m => m >= 1000 ? (m / 1000).toFixed(1) + ' 公里' : Math.max(10, Math.round(m / 10) * 10) + ' 公尺';
+  const degree = i => ADJ[i].length / 2;
+  function eventsOnDay(loc, day) {
+    return (loc.events || []).map(id => M.events && M.events[id]).filter(e => e && (
+      day === '11/14' ? (e.theme || '').startsWith('南') : ((e.days_held_display || '').includes(day) || (e.days_held || []).includes(day))));
+  }
+  function describe(r, from, to) {
+    const P = [{ x: from.x, z: from.z, n: -1, k: -1 }].concat(r.nodes.map((n, i) => ({ x: NX[n], z: NZ[n], n, k: i ? r.edges[i - 1] : -1 }))).concat([{ x: to.x, z: to.z, n: -1, k: -1 }]);
+    let s = 0;
+    P.forEach((p, i) => { if (i) s += Math.hypot(p.x - P[i - 1].x, p.z - P[i - 1].z); p.s = s; });
+    const total = s;
+    const pointAt = d => {
+      d = Math.max(0, Math.min(total, d));
+      for (let i = 1; i < P.length; i++) if (P[i].s >= d) { const a = P[i - 1], b = P[i], t = (d - a.s) / ((b.s - a.s) || 1); return [a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t]; }
+      return [P[P.length - 1].x, P[P.length - 1].z];
+    };
+    // 轉彎：只在路口（分岔 ≥ 3）且方向改變超過 35°
+    const turns = [];
+    for (let i = 1; i < P.length - 1; i++) {
+      const p = P[i];
+      if (p.n < 0 || degree(p.n) < 3 || p.s < 12 || total - p.s < 12) continue;
+      const [bx, bz] = pointAt(p.s - 15), [fx, fz] = pointAt(p.s + 15);
+      const d = angleDiff(heading(bx, bz, p.x, p.z), heading(p.x, p.z, fx, fz));
+      if (Math.abs(d) < 35) continue;
+      const last = turns[turns.length - 1];
+      if (last && p.s - last.s < 20) { if (Math.abs(d) > Math.abs(last.deg)) Object.assign(last, { s: p.s, x: p.x, z: p.z, deg: d }); continue; }
+      turns.push({ s: p.s, x: p.x, z: p.z, deg: d });
+    }
+    turns.forEach(t => { const a = Math.abs(t.deg), lr = t.deg > 0 ? '左' : '右'; t.word = a > 150 ? '迴轉' : a < 60 ? `稍向${lr}轉` : `${lr}轉`; });
+    // 沿路地標：建築輪廓 32 公尺內、活動館舍 52 公尺內
+    const seen = new Map();
+    const consider = (name, d, at, side, place) => {
+      if (sameName(name, from.name) || sameName(name, to.name)) return;
+      const key = [...seen.keys()].find(k => sameName(k, name));
+      if (key) { const o = seen.get(key); if (d < o.d) Object.assign(o, { d, s: at, side }); if (place) { o.place = place; if (key !== name) { seen.delete(key); seen.set(name, Object.assign(o, { name })); } } return; }
+      seen.set(name, { name, d, s: at, side, place });
+    };
+    LANDMARKS.forEach(lm => {
+      let bd = Infinity, bs = 0, bi = 1;
+      for (let i = 1; i < P.length - 1; i++) { const d = distToLandmark(P[i].x, P[i].z, lm); if (d < bd) { bd = d; bs = P[i].s; bi = i; } }
+      if (bd < 32) consider(lm.name, bd, bs, sideOf(P[bi - 1].x, P[bi - 1].z, P[bi + 1].x, P[bi + 1].z, lm.cx, lm.cz), null);
+    });
+    (M.campusLocs || []).forEach(l => {
+      if (l.south || l.remote) return;
+      let bd = Infinity, bs = 0, bi = 1;
+      for (let i = 1; i < P.length; i++) { const d = segDist(l.x, l.y, P[i - 1].x, P[i - 1].z, P[i].x, P[i].z); if (d < bd) { bd = d; bs = P[i].s; bi = i; } }
+      if (bd < 52) consider(l.name, bd, bs, sideOf(P[bi - 1].x, P[bi - 1].z, P[bi].x, P[bi].z, l.x, l.y), l);
+    });
+    const marks = [...seen.values()].sort((a, b) => a.s - b.s);
+    const nearMark = d => { let best = null; marks.forEach(m => { const dd = Math.abs(m.s - d); if (dd < 35 && m.d < 40 && (!best || dd + m.d < Math.abs(best.s - d) + best.d)) best = m; }); return best; };
+    // 每一段的遮蔭比例（依路段長度加權）
+    const shadeBetween = (a, b) => {
+      let len = 0, sh = 0;
+      for (let i = 1; i < P.length; i++) {
+        const k = P[i].k; if (k < 0) continue;
+        const ov = Math.min(b, P[i].s) - Math.max(a, P[i - 1].s);
+        if (ov > 0) { len += ov; sh += ov * SHADE[k]; }
+      }
+      return len ? sh / len : null;
+    };
+    const stops = [0].concat(turns.map(t => t.s)).concat([total]);
+    const turnMarks = turns.map(t => nearMark(t.s));
+    const steps = [];
+    for (let k = 0; k < stops.length - 1; k++) {
+      const a = stops[k], b = stops[k + 1];
+      const atTurn = [turnMarks[k - 1], turnMarks[k]].filter(Boolean);
+      let passing = marks.filter(m => m.s > a + 5 && m.s <= b + 5 && (k === stops.length - 2 || m.s < b - 8) && !atTurn.includes(m));
+      const more = passing.length > 3;
+      if (more) {
+        const len = (b - a) / 3;
+        passing = [0, 1, 2].map(i => passing.filter(m => m.s >= a + i * len - 5 && m.s < a + (i + 1) * len + 5).sort((x, y) => x.d - y.d)[0]).filter((m, i, arr) => m && arr.indexOf(m) === i);
+      }
+      const head = k === 0 ? `從 <b>${esc(disp(from.name))}</b> 出發`
+        : `${turnMarks[k - 1] ? `在 <b>${esc(disp(turnMarks[k - 1].name))}</b> 附近` : '在路口'}<b class="turn">${turns[k - 1].word}</b>`;
+      const sh = shadeBetween(a, b);
+      const icon = k === 0 ? '🚶' : Math.abs(turns[k - 1].deg) > 150 ? '↩️' : turns[k - 1].deg > 0 ? '⬅️' : '➡️';
+      steps.push({ s: a, at: pointAt(a), icon, sh, html: `${head}，直走約 ${fmtM(b - a)}` +
+        (passing.length ? `<small>會經過 ${passing.map(m => esc(disp(m.name)) + (m.side ? `（${m.side}）` : '')).join('、')}${more ? ' 等' : ''}</small>` : '') });
+    }
+    steps.push({ s: total, at: [to.x, to.z], icon: '🏁', sh: null, html: `抵達 <b>${esc(disp(to.name))}</b>` });
+    return { steps, marks };
   }
 
   // ---------- 起點／終點 ----------
@@ -197,6 +318,18 @@
   .sr-bar { height: 6px; border-radius: 3px; background: rgba(255,154,60,.55); overflow: hidden; grid-column: 2; }
   .sr-bar i { display: block; height: 100%; background: #3ddc84; }
   .sr-note { color: var(--muted, #8fb3d9); font-size: 11.5px; margin-top: 8px; line-height: 1.5; }
+  .sr-sec { margin-top: 10px; }
+  .sr-sec h5 { margin: 0 0 4px; font-size: 12.5px; color: var(--cyan, #5ef2ff); }
+  .sr-steps { list-style: none; margin: 0; padding: 0; }
+  .sr-steps li { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; padding: 6px 4px; border-top: 1px dashed rgba(94,242,255,.18); cursor: pointer; line-height: 1.45; border-radius: 6px; }
+  .sr-steps li:hover { background: rgba(94,242,255,.07); }
+  .sr-steps li small { display: block; color: var(--muted, #8fb3d9); font-size: 11.5px; }
+  .sr-steps .turn { color: var(--gold, #ffd36e); margin-left: 2px; }
+  .sr-tag { font-size: 11px; white-space: nowrap; padding: 1px 6px; border-radius: 999px; align-self: start; }
+  .sr-tag.y { background: rgba(61,220,132,.15); color: #3ddc84; } .sr-tag.n { background: rgba(255,154,60,.15); color: #ff9a3c; } .sr-tag.m { background: rgba(255,211,110,.12); color: var(--gold, #ffd36e); }
+  .sr-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .sr-chip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: rgba(94,242,255,.08); border: 1px solid rgba(94,242,255,.2); }
+  .sr-chip.ev { background: rgba(255,211,110,.12); border-color: rgba(255,211,110,.45); color: var(--gold, #ffd36e); cursor: pointer; font-weight: 700; }
   .sr-legend { display: flex; gap: 12px; font-size: 11.5px; color: var(--muted, #8fb3d9); margin-top: 6px; }
   .sr-legend i { display: inline-block; width: 18px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
   .sr-pin { font: 800 12px/1 sans-serif; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,.6); pointer-events: none; }
@@ -339,7 +472,7 @@
   function placePin(o, p) { if (!p) { M.setOverlay(o, false); return; } o.p.set(p.x, yAt(p.x, p.z) + 8, p.z); M.setOverlay(o, false); M.setOverlay(o, true); }
 
   // ---------- 更新 ----------
-  let last = null, flown = '';
+  let last = null, flown = '', stepsAt = [];
   function update(fly) {
     drawSky(); applySun();
     computeShade(sunNow());
@@ -359,15 +492,27 @@
     drawRoute(main, from, to, true);
     const pct = x => Math.round(x * 100);
     const opt = (key, icon, title, r, extra) => `<div class="sr-opt ${st.mode === key ? 'on' : ''}" data-mode="${key}"><span style="font-size:18px">${icon}</span>
-      <span class="t">${title}：${Math.round(r.len)} 公尺・約 ${r.min} 分鐘・遮蔭 ${pct(r.shade)}%</span>
+      <span class="t">${title}：約 ${r.min} 分鐘・${Math.round(r.len)} 公尺・遮蔭 ${pct(r.shade)}%</span>
       <span class="d">${extra}</span><div class="sr-bar"><i style="width:${pct(r.shade)}%"></i></div></div>`;
     const diff = Math.round(b.len - a.len);
     $('#srRes').innerHTML = night ? opt('shortest', '🚶', '最短路線', a, '太陽已下山，不用避開日曬') :
       opt('shortest', '🚶', '最短路線', a, '距離最短') +
       opt('shade', '🌳', '陰涼路線', b, same ? '最短路線剛好就是最陰涼的'
         : `${diff > 5 ? `多走 ${diff} 公尺` : '距離差不多'}，遮蔭${pct(b.shade) >= pct(a.shade) ? '多' : '少'} ${Math.abs(pct(b.shade) - pct(a.shade))}%`);
+    // 路線說明（目前選的那條）
+    const info = describe(main, from, to);
+    const tag = sh => sh == null ? '' : sh >= 0.6 ? '<span class="sr-tag y">🌳 有遮蔭</span>' : sh <= 0.3 ? '<span class="sr-tag n">☀️ 曬太陽</span>' : '<span class="sr-tag m">⛅ 部分遮蔭</span>';
+    const day = dayKey();
+    const evMarks = info.marks.filter(m => m.place).map(m => ({ m, n: eventsOnDay(m.place, day).length })).filter(x => x.n);
+    const plain = info.marks.filter(m => !evMarks.some(x => x.m === m));
+    $('#srRes').insertAdjacentHTML('beforeend', `
+      <div class="sr-sec"><h5>🧭 ${st.mode === 'shade' ? '陰涼路線' : '最短路線'}怎麼走${main.climb >= 5 ? `（有上坡，爬升約 ${Math.round(main.climb)} 公尺，時間已加計）` : ''}</h5>
+        <ol class="sr-steps">${info.steps.map((p, i) => `<li data-step="${i}"><span>${p.icon}</span><div>${p.html}</div>${night ? '' : tag(p.sh)}</li>`).join('')}</ol></div>
+      ${evMarks.length ? `<div class="sr-sec"><h5>⭐ 順路活動（${day}）：點一下改走到這館</h5><div class="sr-chips">${evMarks.map(x => `<span class="sr-chip ev" data-go="${esc(x.m.place.name)}">${esc(disp(x.m.name))} · ${x.n} 項</span>`).join('')}</div></div>` : ''}
+      ${plain.length ? `<div class="sr-sec"><h5>🏢 沿路會看到</h5><div class="sr-chips">${plain.map(m => `<span class="sr-chip">${esc(disp(m.name))}</span>`).join('')}</div></div>` : ''}`);
+    stepsAt = info.steps.map(p => p.at);
     last = { a, b };
-    $('#srMini').innerHTML = `<b>${String(Math.floor(st.min / 60)).padStart(2, '0')}:${String(st.min % 60).padStart(2, '0')}</b>　${esc(from.name)} → ${esc(to.name)}　${st.mode === 'shade' ? '🌳' : '🚶'} ${Math.round(main.len)} 公尺・遮蔭 ${pct(main.shade)}%`;
+    $('#srMini').innerHTML = `<b>${String(Math.floor(st.min / 60)).padStart(2, '0')}:${String(st.min % 60).padStart(2, '0')}</b>　${esc(from.name)} → ${esc(to.name)}　${st.mode === 'shade' ? '🌳' : '🚶'} 約 ${main.min} 分鐘・遮蔭 ${pct(main.shade)}%`;
     const key = from.key + '>' + to.key;
     if (fly || flown !== key) {
       flown = key;
@@ -400,7 +545,11 @@
   $('#srFrom').onchange = e => { st.from = e.target.value; schedule(true); };
   $('#srTo').onchange = e => { st.to = e.target.value; schedule(true); };
   $('#srSwap').onclick = () => { if (!st.to) return; [st.from, st.to] = [st.to, st.from]; fillSelects(); schedule(true); };
-  $('#srRes').addEventListener('click', e => { const o = e.target.closest('[data-mode]'); if (o) { st.mode = o.dataset.mode; schedule(false); } });
+  $('#srRes').addEventListener('click', e => {
+    const o = e.target.closest('[data-mode]'); if (o) { st.mode = o.dataset.mode; schedule(false); return; }
+    const go = e.target.closest('[data-go]'); if (go) { st.to = 'loc:' + go.dataset.go; $('#srTo').value = st.to; schedule(true); return; }
+    const li = e.target.closest('[data-step]'); if (li && stepsAt[+li.dataset.step]) { const [x, z] = stepsAt[+li.dataset.step]; M.flyToPoint(x, z, 160); }
+  });
   $('#srDays').addEventListener('click', e => {
     const b = e.target.closest('button[data-d]'); if (!b) return;
     st.date = b.dataset.d === 'today' ? new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) : b.dataset.d;
