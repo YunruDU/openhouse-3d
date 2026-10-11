@@ -352,7 +352,8 @@
     scene.add(m);
     return m;
   }
-  B.forEach(b => { const m = makeBuilding(b, styleOf(b), 0, 0); if (b.ev) eventMeshes[b.id] = m; });
+  const buildingShapes = [];                       // 南港院區每棟建築的輪廓與實際高度（含屋頂），給陰影計算用
+  B.forEach(b => { const m = makeBuilding(b, styleOf(b), 0, 0); if (b.ev) eventMeshes[b.id] = m; buildingShapes.push({ id: b.id, p: b.p, h: m.userData.height }); });
 
   // ---------- 南部院區（簡易版；放在 x = SOUTH_OFF 遠處，切換院區時鏡頭飛過去）----------
   const SOUTH = window.CAMPUS_SOUTH, CF = window.CUSTOM_FEATURES || {};
@@ -680,6 +681,6 @@
   refreshLabels();
   loop();
 
-  window.MAP3D = { setCampus, getCampus: () => campus, campusCenter: () => CAMPUS[campus].center, SOUTH_OFF, controls, interact, measurePanels, addOverlay, setOverlay, lowGpu, gpuName, scene, camera, inCampus, heightAt, flyToPoint, lowPower, useShadows, frameHooks, locations, campusLocs, events, select, home, setFilter, enableBloom, isMobile, setViewShift };
+  window.MAP3D = { setCampus, getCampus: () => campus, campusCenter: () => CAMPUS[campus].center, SOUTH_OFF, controls, interact, measurePanels, addOverlay, setOverlay, lowGpu, gpuName, scene, camera, inCampus, heightAt, flyToPoint, lowPower, useShadows, frameHooks, locations, campusLocs, events, select, home, setFilter, enableBloom, isMobile, setViewShift, sun, sunTarget: SC, look: LK, buildingShapes };
   window.dispatchEvent(new CustomEvent('map3d:ready'));
 })();
