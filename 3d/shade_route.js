@@ -334,6 +334,12 @@
   .sr-legend i { display: inline-block; width: 18px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
   .sr-pin { font: 800 12px/1 sans-serif; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,.6); pointer-events: none; }
   #btn-shade.on { border-color: #3ddc84; color: #3ddc84; box-shadow: 0 0 12px rgba(61,220,132,.45); }
+  /* 遙控手把永遠在最上層；陰涼路線停靠在右側時，手把留在面板左邊（同活動清單展開時的位置），不被蓋住 */
+  body.sr-open .nav { z-index: 40; }
+  body.sr-docked .nav { right: calc(var(--gutter, 16px) + 402px); }
+  body.sr-docked .about-link { right: calc(var(--gutter, 16px) + 402px); }
+  body.sr-docked .attribution { right: calc(var(--gutter, 16px) + 412px); }
+  @media (max-width: 1280px) { body.sr-docked .nav, body.sr-docked .about-link { right: calc(var(--gutter, 16px) + 352px); } body.sr-docked .attribution { right: calc(var(--gutter, 16px) + 362px); } }
   @media (max-width: 700px) { .sr-panel { top: auto !important; bottom: 8px; max-height: 60vh; } }`;
   document.head.appendChild(css);
 
@@ -578,6 +584,11 @@
     if (u.left && u.top) { panel.style.left = u.left; panel.style.top = u.top; panel.style.right = 'auto'; panel.classList.add('moved'); }
     if (u.min) panel.classList.add('min');
   } catch (e) { /* 無 */ }
+  function syncBody() {
+    const open = panel.classList.contains('open');
+    document.body.classList.toggle('sr-open', open);
+    document.body.classList.toggle('sr-docked', open && !panel.classList.contains('moved') && !panel.classList.contains('min'));
+  }
   const head = panel.querySelector('.sr-head');
   let drag = null;
   head.addEventListener('pointerdown', e => {
@@ -593,10 +604,10 @@
     panel.style.top = (e.clientY - drag.dy) + 'px';
     clampPos();
   });
-  head.addEventListener('pointerup', () => { if (drag) { drag = null; saveUi(); } });
-  head.addEventListener('dblclick', e => { if (!e.target.closest('button')) { panel.style.left = ''; panel.style.right = ''; panel.classList.remove('moved'); dock(); saveUi(); } });   // 雙擊標題回到活動清單的位置
+  head.addEventListener('pointerup', () => { if (drag) { drag = null; saveUi(); syncBody(); } });
+  head.addEventListener('dblclick', e => { if (!e.target.closest('button')) { panel.style.left = ''; panel.style.right = ''; panel.classList.remove('moved'); dock(); saveUi(); syncBody(); } });   // 雙擊標題回到活動清單的位置
   window.addEventListener('resize', clampPos);
-  $('.min').onclick = () => { panel.classList.toggle('min'); $('.min').textContent = panel.classList.contains('min') ? '▢' : '—'; saveUi(); };
+  $('.min').onclick = () => { panel.classList.toggle('min'); $('.min').textContent = panel.classList.contains('min') ? '▢' : '—'; saveUi(); syncBody(); };
   if (panel.classList.contains('min')) $('.min').textContent = '▢';
 
   // 開啟時把「活動總覽」（左）和「活動清單」（右）都收起來，關閉時恢復成原本的樣子
@@ -624,7 +635,7 @@
   window.addEventListener('resize', () => { if (panel.classList.contains('open')) dock(); });
 
   function open() {
-    fillSelects(); makeRoom(true); panel.classList.add('open'); btn.classList.add('on');
+    fillSelects(); makeRoom(true); panel.classList.add('open'); btn.classList.add('on'); syncBody();
     dock(); requestAnimationFrame(dock); setTimeout(dock, 350);      // 等兩側面板收合的動畫結束再對齊一次
     if (window.MAP3D_THEME !== 'day' && !$('#srNight')) {
       $('#srRes').insertAdjacentHTML('beforebegin', '<div class="sr-note" id="srNight" style="color:var(--gold,#ffd36e)">🌙 目前是夜景模式，看不到陽光照出的影子；<a href="?theme=day" style="color:inherit">切換到白天</a>可以看到建築影子隨時間移動（路線計算不受影響）。</div>');
@@ -635,7 +646,7 @@
   function close() {
     stopPlay(); panel.classList.remove('open'); btn.classList.remove('on');
     clearLayer(); M.setOverlay(pinFrom, false); M.setOverlay(pinTo, false); restoreSun();
-    makeRoom(false);
+    makeRoom(false); syncBody();
   }
   btn.onclick = () => (panel.classList.contains('open') ? close() : open());
   $('.x').onclick = close;
