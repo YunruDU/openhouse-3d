@@ -9,6 +9,8 @@
 //     brick     1 = 磚牆紋理
 //     roofType  flat 平頂 | hip 四坡屋頂（傳統式）
 //     floors    樓層數（只在照片明確與 OSM 不符時設定；否則自動用 OSM building:levels）
+//     height    建築高度（公尺；查得到官方數字時才設，優先於 floors，例如挑高的體育館）
+//     查證紀錄見 3d/reference/buildings/院區建築樓高調查.csv
 //     rooftop   true = 頂樓機房
 //     lit       窗戶亮燈比例 0~1
 // - ✔ = 已依照片確認（照片在 3d/reference/buildings/，來源與授權見 manifest.json；2026-10 新增的項目只記錄照片網址，未存放照片檔）；？= 推測，待照片確認
@@ -67,7 +69,7 @@ window.BUILDING_STYLES = {
     127949212: { wall: '#c9542f', roof: '#7d7a74', trim: '#dcdcd6', win: 'grid', floors: 7, rooftop: true },  // 化學研究所（橘紅牆＋白色直向柱列）✔（樓層以照片為準：照片約 7 層，OSM 寫 4 層）
     127949217: { wall: '#a8483a', roof: '#7d7a74', trim: '#eeece6', win: 'grid', rooftop: true, brick: 1 }, // 資訊科學研究所（紅磚、白窗框）✔
     127948742: { wall: '#8e4a44', roof: '#7d7a74', trim: '#7fcfb6', win: 'slit', brick: 1, rooftop: true },  // 資訊科技創新研究中心（深紅褐磚牆＋細長綠色玻璃直窗）✔
-    754128631: { preset: 'glass', rooftop: true },                 // 環境變遷研究大樓 ？
+    754128631: { preset: 'glass', rooftop: true, floors: 10 },     // 環境變遷研究大樓 ？（樓層：監察院報告設計為地上10層、地下3層；院區圖 A 棟用到 9 樓，OSM 寫 7 層）
     155114992: { wall: '#c97a55', roof: '#7d7a74', trim: '#b8433a', win: 'grid', brick: 1 },               // 環境變遷研究中心（舊館，原地球所二館：橘色面磚＋紅色飾帶）✔
     344664763: { preset: 'grey' },                                 // 高能物理與科學計算中心 ？
 
@@ -97,7 +99,7 @@ window.BUILDING_STYLES = {
     // ---- 行政與生活 ----
     127948733: { wall: '#ebe7dd', roof: '#8a8a86', trim: '#a4473a', win: 'band' },                 // 總辦事處行政大樓（米白＋紅磚窗下牆）✔
     127950349: { wall: '#dededa', roof: '#8f9398', trim: '#c9c9c4', win: 'band' },                 // 學術活動中心（灰白磁磚、橫向窗）✔
-    127948735: { preset: 'grey', floors: 4 },                      // 綜合體育館 ？
+    127948735: { preset: 'grey', floors: 3, height: 22, win: 'band' }, // 綜合體育館（總務處：3 層鋼骨、建築高度 22m，3 樓球場挑高）
     127950347: { preset: 'beige', floors: 2 },                     // 北雲餐廳 ？
     127950354: { preset: 'beige' },                     // 歸國學人宿舍 ？
     254447006: { preset: 'temple', floors: 1 },                                                               // 中研福德宮（紅柱、廟）✔

@@ -4,6 +4,7 @@
 //    收合狀態記在 localStorage，收合後重新計算 3D 畫面中心（MAP3D.measurePanels）
 // 2. 接待處帳篷：在「接待與服務」設施中名稱含「接待處」的點，放白色雙尖頂帳篷（灰色側牆、紅色桌裙）
 //    與「A 接待處」字牌；依活動日切換 10/03、10/17 的位置（全部活動日時顯示 10/17 的位置）
+// 4. 活動增減探測：頂部按鈕，列出每次掃描官網時新增／下架的活動（changelog_ui.js，資料 3d/data/changelog.js）
 // 3. 分享連結：網址 ?day=10/17、?loc=館舍名稱、?event=活動編號 開啟時直接定位（與 2D 地圖相同參數，
 //    手機被轉到 2D 時參數會保留）；頂部「複製連結」複製目前選取的館舍與活動日
 // 依賴：main.js（MAP3D）、facilities.js（MAP3D.setFacilities）、hud.js（面板 DOM）
@@ -257,5 +258,16 @@
       if (loc.remote) { const rc = document.getElementById('remote-card'); if (rc) rc.click(); }
       else M.select(loc);
     }, 400);
+  }
+  // ---------------- 4. 活動增減探測 ----------------
+  if (window.ChangeLogUI) {
+    window.ChangeLogUI.mount({
+      data: window.CAMPUS_CHANGELOG || [],
+      anchor: share, place: 'after',
+      btnClass: 'btn', theme: 'dark',
+      btnHtml: '<i class="fa-solid fa-satellite-dish"></i><span class="txt">活動增減</span>',
+      hasEvent: id => !!(M.events && M.events[id]),
+      onEvent: id => { if (M.openEvent) M.openEvent(id); }
+    });
   }
 })();

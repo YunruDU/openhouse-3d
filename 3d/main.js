@@ -325,8 +325,8 @@
 
   const eventMeshes = {};
   function makeBuilding(b, st, ox, oz) {
-    // 高度優先序：building_styles 的 floors（照片確認的例外）→ OSM 樓層數 → OSM 估計高度
-    const H = st.floors ? st.floors * S.floorHeight : b.lv ? b.lv * S.floorHeight : b.h;
+    // 高度優先序：building_styles 的 height（查到實際公尺數）→ floors（照片／資料確認的例外）→ OSM 樓層數 → OSM 估計高度
+    const H = st.height || (st.floors ? st.floors * S.floorHeight : b.lv ? b.lv * S.floorHeight : b.h);
     const mat = buildingMaterial(st, H);
     const m = new THREE.Mesh(extrude(b.p, H), mat);
     m.castShadow = m.receiveShadow = useShadows;
