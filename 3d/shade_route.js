@@ -157,12 +157,24 @@
   // ---------- 介面 ----------
   const css = document.createElement('style');
   css.textContent = `
-  .sr-panel { position: absolute; z-index: 30; top: 72px; left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 170px); overflow-y: auto;
+  .sr-panel { position: absolute; z-index: 30; top: 72px; right: 16px; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - 170px); overflow-y: auto;
     background: linear-gradient(160deg, rgba(14, 34, 72, 0.86), rgba(6, 16, 36, 0.8)); border: 1px solid rgba(94, 242, 255, 0.3); border-radius: 14px;
     backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 12px 40px rgba(0,0,0,.5); color: var(--text, #e6f4ff); padding: 12px 14px; display: none; font-size: 13px; }
   .sr-panel.open { display: block; }
-  .sr-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; margin-bottom: 8px; }
-  .sr-head .x { margin-left: auto; background: none; border: 0; color: var(--muted, #8fb3d9); font-size: 18px; cursor: pointer; }
+  .sr-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; margin: -4px -6px 8px; padding: 4px 6px; border-radius: 8px; cursor: move; user-select: none; touch-action: none; }
+  .sr-head:hover { background: rgba(94,242,255,.06); }
+  .sr-head .grip { color: var(--muted, #8fb3d9); font-size: 12px; letter-spacing: -2px; }
+  .sr-head .hb { background: none; border: 0; color: var(--muted, #8fb3d9); font-size: 17px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .sr-head .hb:hover { color: var(--cyan, #5ef2ff); }
+  .sr-head .hb.min { margin-left: auto; }
+  .sr-mini { display: none; font-size: 12.5px; color: var(--muted, #8fb3d9); }
+  .sr-mini b { color: var(--gold, #ffd36e); }
+  .sr-panel.min { overflow: hidden; }
+  .sr-panel.min > :not(.sr-head):not(.sr-mini) { display: none; }
+  .sr-panel.min .sr-mini { display: block; }
+  .sr-panel.min .sr-head { margin-bottom: 2px; }
+  .sr-panel details.sr-about { margin-top: 8px; font-size: 11.5px; color: var(--muted, #8fb3d9); }
+  .sr-panel details.sr-about summary { cursor: pointer; }
   .sr-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: end; }
   .sr-row label { display: block; font-size: 11px; color: var(--muted, #8fb3d9); margin-bottom: 2px; }
   .sr-panel select, .sr-panel input[type=date] { width: 100%; background: rgba(6,16,36,.7); color: inherit; border: 1px solid rgba(94,242,255,.3); border-radius: 8px; padding: 5px 6px; font: inherit; color-scheme: dark; }
@@ -193,7 +205,8 @@
   const panel = document.createElement('div');
   panel.className = 'sr-panel';
   panel.innerHTML = `
-    <div class="sr-head">🌳 走陰涼路線<span style="font-weight:400;font-size:11px;color:var(--muted)">南港院區</span><button class="x" title="關閉">✕</button></div>
+    <div class="sr-head" title="按住這裡可以拖曳移動"><span class="grip">⋮⋮</span>🌳 走陰涼路線<span style="font-weight:400;font-size:11px;color:var(--muted)">南港院區</span><button class="hb min" type="button" title="縮小／展開">—</button><button class="hb x" type="button" title="關閉">✕</button></div>
+    <div class="sr-mini" id="srMini"></div>
     <div class="sr-row">
       <div><label>起點</label><select id="srFrom"></select></div>
       <button class="sr-swap" id="srSwap" title="對調">⇄</button>
@@ -207,7 +220,7 @@
     <div class="sr-sun" id="srSun"></div>
     <div class="sr-res" id="srRes"></div>
     <div class="sr-legend"><span><i style="background:#3ddc84"></i>有遮蔭（樹蔭或建築影子）</span><span><i style="background:#ff9a3c"></i>曬太陽</span></div>
-    <div class="sr-note">樹蔭來自衛星樹冠高度圖（Meta／WRI，CC BY 4.0），建築影子依所選日期時間的太陽位置計算；未計入山坡地形的遮擋與最近新種、移除的樹，僅供參考。</div>`;
+    <details class="sr-about"><summary>說明</summary>樹蔭來自衛星樹冠高度圖（Meta／WRI，CC BY 4.0），建築影子依所選日期時間的太陽位置計算；未計入山坡地形的遮擋與最近新種、移除的樹，僅供參考。拖曳標題列可以移動這個面板，按「—」可以縮小。</details>`;
   document.body.appendChild(panel);
   ['pointerdown', 'wheel', 'touchstart'].forEach(ev => panel.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
   const $ = s => panel.querySelector(s);
@@ -332,6 +345,7 @@
     const from = pointOf(st.from), to = pointOf(st.to);
     placePin(pinFrom, from); placePin(pinTo, to);
     if (!from || !to || from.key === to.key) {
+      $('#srMini').textContent = '尚未選擇終點（按「—」展開）';
       $('#srRes').innerHTML = `<div class="sr-note" style="margin:0">${!to ? '選擇終點（或直接點 3D 裡的館舍），就會畫出最短與陰涼兩條路線。拖曳上面的太陽可以改變時間。' : '起點和終點是同一個地方。'}</div>`;
       return;
     }
@@ -351,6 +365,7 @@
       opt('shade', '🌳', '陰涼路線', b, same ? '最短路線剛好就是最陰涼的'
         : `${diff > 5 ? `多走 ${diff} 公尺` : '距離差不多'}，遮蔭${pct(b.shade) >= pct(a.shade) ? '多' : '少'} ${Math.abs(pct(b.shade) - pct(a.shade))}%`);
     last = { a, b };
+    $('#srMini').innerHTML = `<b>${String(Math.floor(st.min / 60)).padStart(2, '0')}:${String(st.min % 60).padStart(2, '0')}</b>　${esc(from.name)} → ${esc(to.name)}　${st.mode === 'shade' ? '🌳' : '🚶'} ${Math.round(main.len)} 公尺・遮蔭 ${pct(main.shade)}%`;
     const key = from.key + '>' + to.key;
     if (fly || flown !== key) {
       flown = key;
@@ -398,8 +413,53 @@
     if (!panel.classList.contains('open') || !loc || loc.south || loc.remote) return;
     st.to = 'loc:' + loc.name; $('#srTo').value = st.to; schedule(true);
   });
+  // ---------- 拖曳移動、縮小（位置記在這台電腦）----------
+  const POS_KEY = 'map3d-shade-panel';
+  const saveUi = () => { try { localStorage.setItem(POS_KEY, JSON.stringify({ left: panel.style.left, top: panel.style.top, min: panel.classList.contains('min') })); } catch (e) { /* 無 */ } };
+  function clampPos() {
+    if (!panel.style.left) return;
+    const w = panel.offsetWidth, h = panel.querySelector('.sr-head').offsetHeight + 20;
+    panel.style.left = Math.min(window.innerWidth - Math.min(w, 120), Math.max(8 - w + 120, parseFloat(panel.style.left))) + 'px';
+    panel.style.top = Math.min(window.innerHeight - h, Math.max(60, parseFloat(panel.style.top))) + 'px';
+  }
+  try {
+    const u = JSON.parse(localStorage.getItem(POS_KEY) || '{}');
+    if (u.left && u.top) { panel.style.left = u.left; panel.style.top = u.top; panel.style.right = 'auto'; }
+    if (u.min) panel.classList.add('min');
+  } catch (e) { /* 無 */ }
+  const head = panel.querySelector('.sr-head');
+  let drag = null;
+  head.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || window.innerWidth <= 700) return;
+    const r = panel.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    try { head.setPointerCapture(e.pointerId); } catch (err) { /* 無 */ }
+  });
+  head.addEventListener('pointermove', e => {
+    if (!drag) return;
+    panel.style.right = 'auto';
+    panel.style.left = (e.clientX - drag.dx) + 'px';
+    panel.style.top = (e.clientY - drag.dy) + 'px';
+    clampPos();
+  });
+  head.addEventListener('pointerup', () => { if (drag) { drag = null; saveUi(); } });
+  head.addEventListener('dblclick', e => { if (!e.target.closest('button')) { panel.style.left = panel.style.top = ''; panel.style.right = ''; saveUi(); } });   // 雙擊標題回到預設位置
+  window.addEventListener('resize', clampPos);
+  $('.min').onclick = () => { panel.classList.toggle('min'); $('.min').textContent = panel.classList.contains('min') ? '▢' : '—'; saveUi(); };
+  if (panel.classList.contains('min')) $('.min').textContent = '▢';
+
+  // 開啟時，如果右側「活動清單」面板開著而且會被擋住，就先收起來，關閉時再展開
+  let foldedRight = false;
+  function makeRoom(on) {
+    const right = document.querySelector('.panel-right'), b = right && right.querySelector('.collapse-btn');
+    if (!b) return;
+    if (on && !panel.style.left && !right.classList.contains('collapsed')) { b.click(); foldedRight = true; }
+    else if (!on && foldedRight) { if (right.classList.contains('collapsed')) b.click(); foldedRight = false; }
+  }
+
   function open() {
     fillSelects(); panel.classList.add('open'); btn.classList.add('on');
+    makeRoom(true);
     if (window.MAP3D_THEME !== 'day' && !$('#srNight')) {
       $('#srRes').insertAdjacentHTML('beforebegin', '<div class="sr-note" id="srNight" style="color:var(--gold,#ffd36e)">🌙 目前是夜景模式，看不到陽光照出的影子；<a href="?theme=day" style="color:inherit">切換到白天</a>可以看到建築影子隨時間移動（路線計算不受影響）。</div>');
     }
@@ -409,6 +469,7 @@
   function close() {
     stopPlay(); panel.classList.remove('open'); btn.classList.remove('on');
     clearLayer(); M.setOverlay(pinFrom, false); M.setOverlay(pinTo, false); restoreSun();
+    makeRoom(false);
   }
   btn.onclick = () => (panel.classList.contains('open') ? close() : open());
   $('.x').onclick = close;
