@@ -18,7 +18,13 @@
     { key: '11/14', label: '南部院區', sub: '11/14' }
   ];
   const CAMPUS_DAYS = ['10/03', '10/17'];
-  const GROUPS = [['ALL', '全部學術組別'], ['數理科學', '數理科學組'], ['生命科學', '生命科學組'], ['人文及社會科學', '人文社會組'], ['院本部', '院本部/其他']];
+  // 學術組別選單依實際資料產生（值一定和 group_name 相同，避免「人文社會科學」vs「人文及社會科學」這種寫法不同而查不到）
+  const GROUP_LABEL = { '數理科學': '數理科學組', '生命科學': '生命科學組', '人文社會科學': '人文社會組', '人文及社會科學': '人文社會組', '院本部': '院本部' };
+  const GROUP_ORDER = ['數理科學', '生命科學', '人文社會科學', '人文及社會科學', '院本部'];
+  const GROUPS = [['ALL', '全部學術組別']].concat(
+    Object.entries(EVENTS.reduce((m, e) => { if (e.group_name) m[e.group_name] = (m[e.group_name] || 0) + 1; return m; }, {}))
+      .sort((a, b) => ((GROUP_ORDER.indexOf(a[0]) + 1) || 99) - ((GROUP_ORDER.indexOf(b[0]) + 1) || 99) || b[1] - a[1])
+      .map(([g, n]) => [g, `${GROUP_LABEL[g] || g}（${n}）`]));
   const TYPES = [...new Set(EVENTS.map(e => e.event_type).filter(Boolean))];
   const TYPE_ICON = { '參觀導覽': 'fa-person-walking', '互動體驗': 'fa-hand-pointer', '成果展示': 'fa-flask', '演講座談': 'fa-microphone', '影片欣賞': 'fa-film', '其他活動': 'fa-star' };
   const T_MIN = 8 * 60, T_MAX = 18 * 60;
