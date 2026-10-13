@@ -299,7 +299,24 @@
     const from = parseInt(el.textContent) || 0, t0 = performance.now();
     (function step(now) { const k = Math.min(1, (now - t0) / 600); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))) + (suffix || ''); if (k < 1) requestAnimationFrame(step); })(t0);
   }
+  // 學術組別選單跟著活動日變：只列出當天有活動的組別與場數（例如跨學組研究中心只有 11/14 南部院區有活動）
+  let groupSig = '';
+  function refreshGroups() {
+    const onDay = e => state.day === '11/14' ? (e.theme || '').startsWith('南') : state.day === 'all' || e.days.includes(state.day);
+    const n = {};
+    EVENTS.forEach(e => { if (e.group_name && onDay(e)) n[e.group_name] = (n[e.group_name] || 0) + 1; });
+    const opts = GROUPS.slice(1).filter(([g]) => n[g] || g === state.group)
+      .map(([g]) => [g, `${GROUP_LABEL[g] || g}（${n[g] || 0}）`]);
+    const sig = state.day + '|' + state.group + '|' + opts.map(o => o[1]).join();
+    if (sig === groupSig) return;
+    groupSig = sig;
+    const sel = $('#group-sel');
+    sel.innerHTML = [['ALL', '全部學術組別'], ...opts].map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+    sel.value = state.group;
+  }
+
   function apply() {
+    refreshGroups();
     const list = EVENTS.filter(pass);
     const locN = new Set(list.map(e => e.location)).size;
     let lim = 0, reg = 0;
