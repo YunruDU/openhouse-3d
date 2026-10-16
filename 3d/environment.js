@@ -160,7 +160,8 @@
   // ---------- 樹：多團樹冠（闊葉林，台灣低海拔山區）----------
   if (V.trees) {
     // 樹量：院區附近 / 後山分開控制；內建顯示卡用 lowGpu 設定；之後自動降級可再用 MAP3D.setTreeDensity 減少
-    const Tr = E.trees.slice(), G = M.lowGpu ? V.lowGpu : V;
+    // 院區與周邊用衛星樹冠高度圖的真實位置（3d/data/trees_real.js，由 真實樹木.py 產生；種類 2）；沒有這個檔時用原本的樹
+    const Tr = (window.CAMPUS_TREES_REAL || E.trees).slice(), G = M.lowGpu ? V.lowGpu : V;
     if (SOUTH) {                                   // 南部院區：院內空地與周邊撒樹（避開建築）
       const pip = (x, y, p) => { let o = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) o = !o; } return o; };
       for (let x = -250; x < 450; x += 16) for (let y = -280; y < 360; y += 16) {
@@ -171,6 +172,7 @@
       }
     }
     const keep = (i, d) => (Math.abs(Math.sin(Tr[i] * 3.17 + Tr[i + 1] * 7.93) * 9301.7) % 1) < d;   // 固定亂數抽樣，分布均勻
+    const densityOf = i => Tr[i + 4] === 1 ? G.mountainTreeDensity : Tr[i + 4] === 2 ? (M.lowGpu ? 0.6 : 1) : G.treeDensity;   // 真實位置的樹全部保留（內建顯示卡保留六成）
     const U = THREE.BufferGeometryUtils;
     function canopy(seed, blobs, trunk, smooth) {                // 球狀樹冠 + 樹幹；smooth = 圓滑（院區）
       const rnd = (k) => { const x = Math.sin(seed * 91.7 + k * 13.3) * 43758.5; return x - Math.floor(x); };
@@ -197,7 +199,7 @@
     const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0, envMapIntensity: 0.25 });
     const palette = V.treeColors.map(c => new THREE.Color(c));
     const buckets = [[], [], []], treeMeshes = [];
-    for (let i = 0; i < Tr.length; i += 5) { if (keep(i, Tr[i + 4] === 1 ? G.mountainTreeDensity : G.treeDensity) && !inPond(Tr[i], Tr[i + 1], 1.25)) buckets[Tr[i + 4] === 1 ? 2 : ((Tr[i] * 7 + Tr[i + 1] * 3) & 0x7fffffff) % 2].push(i); }
+    for (let i = 0; i < Tr.length; i += 5) { if (keep(i, densityOf(i)) && !inPond(Tr[i], Tr[i + 1], 1.25)) buckets[Tr[i + 4] === 1 ? 2 : ((Tr[i] * 7 + Tr[i + 1] * 3) & 0x7fffffff) % 2].push(i); }
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), c = new THREE.Color();
     buckets.forEach(idx => idx.sort((p, q) => (Math.sin(Tr[p] * 1.7 + Tr[p + 1]) * 1e4 % 1) - (Math.sin(Tr[q] * 1.7 + Tr[q + 1]) * 1e4 % 1)));
     buckets.forEach((idx, b) => {

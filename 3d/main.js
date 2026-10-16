@@ -324,18 +324,57 @@
   }
 
   const eventMeshes = {};
+  // 輪廓往外推 d 公尺（基座外包用；逐點沿兩邊法線的角平分線推）
+  function offsetPoly(p, d) {
+    const sgn = p.reduce((a, [x, y], i) => { const [x2, y2] = p[(i + 1) % p.length]; return a + x * y2 - x2 * y; }, 0) > 0 ? 1 : -1;
+    const nrm = (a, b2) => { const dx = b2[0] - a[0], dy = b2[1] - a[1], l = Math.hypot(dx, dy) || 1; return [dy / l * sgn, -dx / l * sgn]; };
+    return p.map((v, i) => {
+      const n1 = nrm(p[(i + p.length - 1) % p.length], v), n2 = nrm(v, p[(i + 1) % p.length]);
+      let mx = n1[0] + n2[0], my = n1[1] + n2[1]; const l = Math.hypot(mx, my) || 1; mx /= l; my /= l;
+      const k = d / Math.max(0.35, mx * n1[0] + my * n1[1]);
+      return [v[0] + mx * k, v[1] + my * k];
+    });
+  }
+
+  // 一棟建築可以由多個部分組成（building_styles 的 parts／drum／base）：例如文哲所＝兩翼不同樓高＋中間圓柱
   function makeBuilding(b, st, ox, oz) {
+    const parts = st.parts ? st.parts.map(q => [q.p, Object.assign({}, st, q)]) : [[b.p, st]];
+    const m = makeBody(b, parts[0][0], parts[0][1]);
+    const mats = [m.material];
+    let top = m.userData.height;
+    const add = c => { c.castShadow = c.receiveShadow = useShadows; m.add(c); mats.push(c.material); };
+    parts.slice(1).forEach(([p, s2]) => { const c = makeBody(b, p, s2); add(c); top = Math.max(top, c.userData.height); });
+    if (st.base) {                                   // 一樓石材基座：略大一圈包住牆腳
+      const bs = Object.assign({}, st, { wall: st.base.color, trim: st.base.color, roof: st.base.color, win: 'none', brick: 0 });
+      parts.forEach(([p]) => add(new THREE.Mesh(extrude(offsetPoly(p, 0.25), st.base.h || S.floorHeight), buildingMaterial(bs, st.base.h || S.floorHeight))));
+    }
+    if (st.drum) {                                   // 圓柱量體（入口塔）
+      const d = st.drum, ds = Object.assign({}, st, d), dh = d.height || (d.floors || 4) * S.floorHeight;
+      const g = new THREE.CylinderGeometry(d.r, d.r, dh, 40, 1);
+      g.translate(d.x, dh / 2, d.z);
+      add(new THREE.Mesh(g, buildingMaterial(ds, dh)));
+      top = Math.max(top, dh);
+    }
+    m.userData.height = top;
+    m.userData.mats = mats;
+    m.userData.center = [b.p.reduce((a, v) => a + v[0], 0) / b.p.length + ox, b.p.reduce((a, v) => a + v[1], 0) / b.p.length + oz];
+    m.position.set(ox, 0, oz);
+    scene.add(m);
+    return m;
+  }
+
+  function makeBody(b, p, st) {
     // 高度優先序：building_styles 的 height（查到實際公尺數）→ floors（照片／資料確認的例外）→ OSM 樓層數 → OSM 估計高度
     const H = st.height || (st.floors ? st.floors * S.floorHeight : b.lv ? b.lv * S.floorHeight : b.h);
     const mat = buildingMaterial(st, H);
-    const m = new THREE.Mesh(extrude(b.p, H), mat);
+    const m = new THREE.Mesh(extrude(p, H), mat);
     m.castShadow = m.receiveShadow = useShadows;
     let top = H;
-    const o = obb(b.p);
+    const o = obb(p);
     // 四坡屋頂只用在接近矩形的建築（面積 / 外接矩形 ≥ 0.82），否則外接矩形會比建築大很多
-    const area = Math.abs(b.p.reduce((a, [x, y], i) => { const [x2, y2] = b.p[(i + 1) % b.p.length]; return a + x * y2 - x2 * y; }, 0)) / 2;
+    const area = Math.abs(p.reduce((a, [x, y], i) => { const [x2, y2] = b.p[(i + 1) % p.length]; return a + x * y2 - x2 * y; }, 0)) / 2;
     if (st.roofType === 'hip') {
-      const r = area / (o.L * o.W) >= 0.82 ? hipRoof(o, H, 0.8) : footprintRoof(b.p, H, Math.min(Math.sqrt(area) * 0.18, 6));
+      const r = area / (o.L * o.W) >= 0.82 ? hipRoof(o, H, 0.8) : footprintRoof(p, H, Math.min(Math.sqrt(area) * 0.18, 6));
       const rm = new THREE.Mesh(r.geo, mat); rm.castShadow = rm.receiveShadow = useShadows;
       m.add(rm); top += r.height;
     } else if (st.rooftop && o.L * o.W > 500) {    // 頂樓機房
@@ -347,13 +386,12 @@
       m.add(bm); top += 3.6;
     }
     m.userData.height = top;
-    m.userData.center = [b.p.reduce((a, v) => a + v[0], 0) / b.p.length + ox, b.p.reduce((a, v) => a + v[1], 0) / b.p.length + oz];
-    m.position.set(ox, 0, oz);
-    scene.add(m);
     return m;
   }
   const buildingShapes = [];                       // 南港院區每棟建築的輪廓與實際高度（含屋頂），給陰影計算用
-  B.forEach(b => { const m = makeBuilding(b, styleOf(b), 0, 0); if (b.ev) eventMeshes[b.id] = m; buildingShapes.push({ id: b.id, p: b.p, h: m.userData.height }); });
+  B.forEach(b => { const m = makeBuilding(b, styleOf(b), 0, 0); if (b.ev) eventMeshes[b.id] = m; const st = styleOf(b);
+    if (st.parts) st.parts.forEach(q => buildingShapes.push({ id: b.id, p: q.p, h: m.userData.height }));   // 陰影用各部分輪廓
+    else buildingShapes.push({ id: b.id, p: b.p, h: m.userData.height }); });
 
   // ---------- 南部院區（簡易版；放在 x = SOUTH_OFF 遠處，切換院區時鏡頭飛過去）----------
   const SOUTH = window.CAMPUS_SOUTH, CF = window.CUSTOM_FEATURES || {};
@@ -462,7 +500,7 @@
 
   // ---------- 選取 / 篩選 / 飛行 ----------
   function setHighlight(loc, v) {
-    if (loc && loc.mesh) loc.mesh.material.userData.u.uHi.value = v;
+    if (loc && loc.mesh) (loc.mesh.userData.mats || [loc.mesh.material]).forEach(t => { t.userData.u.uHi.value = v; });
   }
 
   function flyTo(target, distance) {
@@ -513,7 +551,7 @@
     campusLocs.forEach(l => {
       l.dimmed = fn ? !fn(l) : false;
       setOverlay(l.ov, !l.dimmed);
-      if (l.mesh) l.mesh.material.userData.u.uDim.value = l.dimmed ? 1 : 0;
+      if (l.mesh) (l.mesh.userData.mats || [l.mesh.material]).forEach(t => { t.userData.u.uDim.value = l.dimmed ? 1 : 0; });
     });
     refreshLabels();
   }
